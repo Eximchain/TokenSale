@@ -23,7 +23,6 @@ const Utils        = require('./utils.js')
 // ----------------------------------------------------------------------------
 // Script Summary
 // ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
 
 
 const TOKEN_NAME            = "Eximchain Token"
@@ -97,7 +96,7 @@ async function run() {
    //
    // Deploy Token Contract
    //
-   deploymentResult = await Utils.deployContract('EximchainToken', [ ], { from: owner })
+   deploymentResult = await Utils.deployContract(web3, 'EximchainToken', [ ], { from: owner })
    recordTransaction('EximchainToken.new', deploymentResult.receipt, false)
    token = deploymentResult.instance
    receipt = deploymentResult.receipt
@@ -116,8 +115,8 @@ async function run() {
    //
    // Deploy Token Sale Contract
    //
-   //deploymentResult = await Utils.deployContract('EximchainTokenSaleMock', [ wallet, Moment().unix() ], { from: owner })
-   deploymentResult = await Utils.deployContract('EximchainTokenSale', [ wallet ], { from: owner })
+   //deploymentResult = await Utils.deployContract(web3, 'EximchainTokenSaleMock', [ wallet, Moment().unix() ], { from: owner })
+   deploymentResult = await Utils.deployContract(web3, 'EximchainTokenSale', [ wallet ], { from: owner })
    recordTransaction('EximchainTokenSale.new', deploymentResult.receipt)
    sale = deploymentResult.instance
    assert.equal(await sale.methods.owner().call(), owner)

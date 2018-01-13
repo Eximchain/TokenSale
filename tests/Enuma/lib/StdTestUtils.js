@@ -44,6 +44,17 @@ module.exports.checkTransfer = (receipt, from, to, value) => {
 }
 
 
+module.exports.checkFinalize = (receipt) => {
+
+   TestLib.checkStatus(receipt)
+
+   assert.equal(Object.keys(receipt.events).length, 1)
+   assert.equal(typeof receipt.events.Finalized, 'object')
+   const eventArgs = receipt.events.Finalized.returnValues
+   assert.equal(Object.keys(eventArgs).length, 0)
+}
+
+
 module.exports.checkApprove = (receipt, owner, spender, value) => {
 
    TestLib.checkStatus(receipt)
@@ -188,15 +199,27 @@ module.exports.checkInitialize = (receipt) => {
 }
 
 
-module.exports.checkFinalize = (receipt) => {
+module.exports.checkStart = (receipt) => {
 
    TestLib.checkStatus(receipt)
 
    assert.equal(Object.keys(receipt.events).length, 1)
-   assert.equal(typeof receipt.events.Finalized, 'object')
-   const eventArgs = receipt.events.Finalized.returnValues
+   assert.equal(typeof receipt.events.Started, 'object')
+   const eventArgs = receipt.events.Started.returnValues
    assert.equal(Object.keys(eventArgs).length, 0)
 }
+
+
+module.exports.checkStop = (receipt) => {
+
+   TestLib.checkStatus(receipt)
+
+   assert.equal(Object.keys(receipt.events).length, 1)
+   assert.equal(typeof receipt.events.Stopped, 'object')
+   const eventArgs = receipt.events.Stopped.returnValues
+   assert.equal(Object.keys(eventArgs).length, 0)
+}
+
 
 module.exports.checkReclaimTokens = (receipt, amount) => {
 

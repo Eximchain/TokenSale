@@ -5,7 +5,7 @@
 // http://www.eximchain.com/
 // The MIT Licence.
 //
-// Based on FlexibleTokenSale tests from Enuma Technologies.
+// Based on FinalizableToken tests from Enuma Technologies.
 // Copyright (c) 2017 Enuma Technologies
 // https://www.enuma.io/
 // ----------------------------------------------------------------------------
@@ -17,6 +17,7 @@ const Utils = require('./lib/EximchainTestUtils.js')
 // Tests Summary
 // ----------------------------------------------------------------------------
 // Construction and basic properties
+//    - frozen
 //    - name (inherited)
 //    - symbol (inherited)
 //    - decimals (inherited)
@@ -32,6 +33,12 @@ const Utils = require('./lib/EximchainTestUtils.js')
 //    - burn(balance)
 //    - burn as ops
 //    - burn as normal
+// freeze
+//    - freeze as normal
+//    - freeze as ops
+//    - freeze before finalize
+//    - freeze when already frozen
+//    - freeze after finalize
 // Events
 //    TokensBurnt
 //       * Covered in the burn function tests.
@@ -113,12 +120,6 @@ describe('EximchainToken Contract', () => {
    })
 
 
-//    - burn(0)
-//    - burn(1)
-//    - burn(> balance)
-//    - burn(balance)
-//    - burn as ops
-//    - burn as normal
    context('burn', async () => {
 
       before(async () => {
@@ -179,6 +180,56 @@ describe('EximchainToken Contract', () => {
          const tokensAfter  = new BigNumber(await token.methods.balanceOf(account1).call())
 
          assert.isTrue(tokensAfter.sub(tokensBefore).eq(tokensBefore.mul(-1)), "Expected account1 tokens to all be burnt")
+      })
+   })
+
+
+   context('freeze', async () => {
+
+      before(async () => {
+      })
+
+
+      it('freeze as normal', async () => {
+         await TestLib.assertCallFails(token.methods.freeze().call({ from: account1 }))
+      })
+
+      it('freeze as ops', async () => {
+         await TestLib.assertCallFails(token.methods.freeze().call({ from: ops }))
+      })
+
+      it('freeze before finalize', async () => {
+         assert.equal(await token.methods.finalized().call(), false)
+         assert.equal(await token.methods.frozen().call(), false)
+
+         await TestLib.assertCallFails(token.methods.transfer(account1, 1).call({ from: owner }))
+
+         assert.equal(await token.methods.freeze().call({ from: owner }), true)
+         Utils.checkFreeze(await token.methods.freeze().send({ from: owner }))
+
+         await TestLib.assertCallFails(token.methods.transfer(account1, 1).call({ from: owner }))
+      })
+
+      it('freeze when already frozen', async () => {
+         assert.equal(await token.methods.frozen().call(), true)
+
+         await TestLib.assertCallFails(token.methods.freeze().call({ from: owner }))
+      })
+
+      it('freeze after finalize', async () => {
+         deploymentResult = await TestLib.deploy('EximchainToken', [], { from: owner })
+         token = deploymentResult.instance
+         await token.methods.finalize().send({ from: owner })
+         assert.equal(await token.methods.finalized().call(), true)
+         assert.equal(await token.methods.frozen().call(), false)
+
+         assert.equal(await token.methods.transfer(account1, 1).call({ from: owner }), true)
+
+         assert.equal(await token.methods.freeze().call({ from: owner }), true)
+         Utils.checkFreeze(await token.methods.freeze().send({ from: owner }))
+         assert.equal(await token.methods.frozen().call(), true)
+
+         await TestLib.assertCallFails(token.methods.transfer(account1, 1).call({ from: owner }))
       })
    })
 })

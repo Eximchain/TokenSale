@@ -24,6 +24,17 @@ module.exports.checkBurn = (receipt, account, amount) => {
 }
 
 
+module.exports.checkFreeze = (receipt) => {
+
+   TestLib.checkStatus(receipt)
+
+   assert.equal(Object.keys(receipt.events).length, 1)
+   assert.equal(typeof receipt.events.Frozen, 'object')
+   const eventArgs = receipt.events.Frozen.returnValues
+   assert.equal(Object.keys(eventArgs).length, 0)
+}
+
+
 module.exports.checkUpdateWhitelist = (receipt, account, _status) => {
 
    TestLib.checkStatus(receipt)
