@@ -26,6 +26,7 @@ contract EximchainToken is FinalizableToken, EximchainTokenConfig {
    // Events
    //
    event TokensBurnt(address indexed _account, uint256 _amount);
+   event TokensReclaimed(uint256 _amount);
    event Frozen();
 
 
@@ -62,6 +63,27 @@ contract EximchainToken is FinalizableToken, EximchainTokenConfig {
       tokenTotalSupply = tokenTotalSupply.sub(_amount);
 
       TokensBurnt(account, _amount);
+
+      return true;
+   }
+
+
+   // Allows the owner to reclaim tokens that are assigned to the token contract itself.
+   function reclaimTokens() public onlyOwner returns (bool) {
+
+      address account = address(this);
+      uint256 amount  = balanceOf(account);
+
+      if (amount == 0) {
+         return false;
+      }
+
+      balances[account] = balances[account].sub(amount);
+      balances[owner] = balances[owner].add(amount);
+
+      Transfer(account, owner, amount);
+
+      TokensReclaimed(amount);
 
       return true;
    }

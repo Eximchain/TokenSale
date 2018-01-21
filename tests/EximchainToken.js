@@ -30,9 +30,14 @@ const Utils = require('./lib/EximchainTestUtils.js')
 //    - burn(0)
 //    - burn(1)
 //    - burn(> balance)
-//    - burn(balance)
+//    - burn(balance - 1000)
 //    - burn as ops
 //    - burn as normal
+// reclaimTokens
+//    - reclaimTokens when 0 to reclaim
+//    - reclaimTokens when > 0 to reclaim
+//    - reclaim tokens again
+//    - reclaim tokens as normal
 // freeze
 //    - freeze as normal
 //    - freeze as ops
@@ -41,6 +46,7 @@ const Utils = require('./lib/EximchainTestUtils.js')
 //    - freeze after finalize
 // Events
 //    TokensBurnt
+//    TokensReclaimed
 //       * Covered in the burn function tests.
 //
 describe('EximchainToken Contract', () => {
@@ -149,15 +155,17 @@ describe('EximchainToken Contract', () => {
          await TestLib.assertCallFails(token.methods.burn(ownerTokensBefore.add(1)).call({ from: owner }))
       })
 
-      it('burn(balance)', async () => {
-         const ownerTokensBefore = new BigNumber(await token.methods.balanceOf(owner).call())
+      it('burn(balance - 1000)', async () => {
+         var ownerTokensBefore = new BigNumber(await token.methods.balanceOf(owner).call()).sub(1000)
+         assert.isTrue(ownerTokensBefore.gte(0))
 
          assert.equal(await token.methods.burn(ownerTokensBefore).call({ from: owner }), true)
          Utils.checkBurn(await token.methods.burn(ownerTokensBefore).send({ from: owner }), owner, ownerTokensBefore.toNumber())
 
          const ownerTokensAfter  = new BigNumber(await token.methods.balanceOf(owner).call())
 
-         assert.isTrue(ownerTokensAfter.sub(ownerTokensBefore).eq(ownerTokensBefore.mul(-1)), "Expected owner tokens to all be burnt")
+         //assert.isTrue(ownerTokensAfter.sub(ownerTokensBefore).eq(ownerTokensBefore.mul(-1)), "Expected owner tokens to all be burnt")
+         assert.equal(ownerTokensAfter.toString(), 1000)
       })
 
       it('burn as ops', async () => {
@@ -202,7 +210,9 @@ describe('EximchainToken Contract', () => {
          assert.equal(await token.methods.finalized().call(), false)
          assert.equal(await token.methods.frozen().call(), false)
 
-         await TestLib.assertCallFails(token.methods.transfer(account1, 1).call({ from: owner }))
+         await token.methods.transfer(account1, 1).call({ from: owner })
+
+         await TestLib.assertCallFails(token.methods.transfer(account1, 2).call({ from: account1 }))
 
          assert.equal(await token.methods.freeze().call({ from: owner }), true)
          Utils.checkFreeze(await token.methods.freeze().send({ from: owner }))
@@ -219,17 +229,62 @@ describe('EximchainToken Contract', () => {
       it('freeze after finalize', async () => {
          deploymentResult = await TestLib.deploy('EximchainToken', [], { from: owner })
          token = deploymentResult.instance
+         await token.methods.transfer(account1, 10).send({ from: owner })
          await token.methods.finalize().send({ from: owner })
          assert.equal(await token.methods.finalized().call(), true)
          assert.equal(await token.methods.frozen().call(), false)
 
+         assert.equal(await token.methods.transfer(account2, 1).call({ from: account1 }), true)
          assert.equal(await token.methods.transfer(account1, 1).call({ from: owner }), true)
 
          assert.equal(await token.methods.freeze().call({ from: owner }), true)
          Utils.checkFreeze(await token.methods.freeze().send({ from: owner }))
          assert.equal(await token.methods.frozen().call(), true)
 
+         await TestLib.assertCallFails(token.methods.transfer(account2, 1).call({ from: account1 }))
          await TestLib.assertCallFails(token.methods.transfer(account1, 1).call({ from: owner }))
+      })
+   })
+
+
+   context('reclaimTokens', async () => {
+
+      before(async () => {
+         deploymentResult = await TestLib.deploy('EximchainToken', [], { from: owner })
+
+         token = deploymentResult.instance
+
+         await token.methods.setOpsAddress(ops).send({ from: owner })
+      })
+
+
+      it('reclaimTokens when 0 to reclaim', async () => {
+         assert.equal(await token.methods.balanceOf(token._address).call(), 0)
+
+         assert.equal(await token.methods.reclaimTokens().call({ from: owner }), false)
+      })
+
+      it('reclaimTokens when > 0 to reclaim', async () => {
+         await token.methods.transfer(token._address, 1000).send({ from: owner })
+         assert.equal(await token.methods.balanceOf(token._address).call(), 1000)
+
+         const ownerBalanceBefore = new BigNumber(await token.methods.balanceOf(owner).call())
+
+         assert.equal(await token.methods.reclaimTokens().call({ from: owner }), true)
+         Utils.checkReclaimTokens(await token.methods.reclaimTokens().send({ from: owner }), token._address, owner, 1000)
+
+         assert.equal(await token.methods.balanceOf(token._address).call(), 0)
+         assert.equal(ownerBalanceBefore.sub(await token.methods.balanceOf(owner).call()).toString(), -1000)
+      })
+
+      it('reclaimTokens again', async () => {
+         assert.equal(await token.methods.balanceOf(token._address).call(), 0)
+
+         assert.equal(await token.methods.reclaimTokens().call({ from: owner }), false)
+      })
+
+      it('reclaimTokens as normal', async () => {
+         await TestLib.assertCallFails(token.methods.reclaimTokens().send({ from: account1 }))
       })
    })
 })

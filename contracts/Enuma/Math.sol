@@ -28,9 +28,13 @@ library Math {
 
 
    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+      if (a == 0) {
+         return 0;
+      }
+
       uint256 r = a * b;
 
-      require(a == 0 || r / a == b);
+      require(r / a == b);
 
       return r;
    }
